@@ -1,5 +1,7 @@
 package springer.watermark.model
 
+import springer.watermark.model.Enum.TicketStatus
+
 // import springer.watermark.model.TicketStatus
 
 /**

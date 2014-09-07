@@ -2,7 +2,8 @@ import akka.actor.{Props, ActorSystem}
 import akka.util.Timeout
 import akka.testkit.{TestKit, ImplicitSender}
 import springer.watermark.actor.{WaterMarker, ProcessorActor}
-import springer.watermark.model.{TopicType, Journal, Document}
+import springer.watermark.model.Enum.TopicType
+import scala.concurrent.Await
 import scala.concurrent.duration._
 import org.scalatest._
 import WaterMarker._
@@ -48,16 +49,30 @@ class WatermarkSpec(_system: ActorSystem)
 
     "create watermarks for books" in {
       val waterMarker = system.actorOf(Props[WaterMarker], name = "book-with-topic")
-      val document = Book("title", "author", "content", TopicType.Business)
+      val document = Book("title", "author", "content", Enum.TopicType.Business)
       waterMarker ! WaterMarkDocument(document, this.self)
       expectMsgPF(hint = "no WaterMarkedDocument") {
-        case WaterMarkedDocument(doc) =>
-           Assertions.assert(!doc.watermark.author.equals("undefined"),"could not watermark document")
+        case WaterMarkedDocument(doc) => assert(doc.watermark.isDefined)
+           //Assertions.assert(!doc.watermark != None,"could not watermark document")
           //assert(doc.waterMark.isDefined)
           //assert(doc.waterMark.get.topic.isEmpty)
       }
 
     }
+
+    /*
+    "create different tickets for different Documents" in {
+      val processor = system.actorOf(Props[WaterMarker], "ticket-generator")
+      val documentA: Document = Book("bookTitle", "author", "Book", TopicType.Media)
+      val documentB: Document = Journal("journalTitle", "author", "Journal")
+      val result = Await.result(
+        (processor ? Sign(documentA)) zip (processor ? Sign(documentB)) map {
+          case (SigningTicket(ta), SigningTicket(tb)) => ta.id != tb.id
+          case _ => false
+        }, 5 seconds)
+      assert(result, "ticket number is the same")
+    }
+*/
 
     /*
     "create a watermark" in {

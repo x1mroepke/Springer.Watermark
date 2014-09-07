@@ -3,6 +3,7 @@ package springer.watermark.actor
 import akka.actor._
 import akka.event.LoggingReceive
 import springer.watermark.exception.UnknownDocumentTypeException
+import springer.watermark.model.Enum.TopicType
 import springer.watermark.model.Ticket.Status
 import springer.watermark.model._
 import WaterMarker._
