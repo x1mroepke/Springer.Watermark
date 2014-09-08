@@ -6,5 +6,5 @@ package springer.watermark.model
 case class WatermarkSignature(content: String,
                              title: String,
                              author: String,
-                             topic: Option[Enum.TopicType.TopicType]
+                             topic: Option[Enum.TopicType.TopicType] = None
                               )

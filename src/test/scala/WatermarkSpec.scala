@@ -1,17 +1,14 @@
 import akka.actor.{Props, ActorSystem}
 import akka.util.Timeout
 import akka.testkit.{TestKit, ImplicitSender}
-import springer.watermark.actor.{WaterMarker, ProcessorActor}
-import springer.watermark.model.Enum.TopicType
-import scala.concurrent.Await
+import springer.watermark.actor.WaterMarker.{GetWatermarkStatus, WaterMarkedDocument, WaterMarkDocument}
+import springer.watermark.actor._
+import springer.watermark.model.Enum.TicketStatus
 import scala.concurrent.duration._
 import org.scalatest._
-import WaterMarker._
 import springer.watermark.model._
 
 //import system.dispatcher
-import ProcessorActor._
-
 
 /**
  * Akka system Tests.
@@ -35,22 +32,28 @@ class WatermarkSpec(_system: ActorSystem)
 
     "create watermarks for books" in {
       val waterMarker = system.actorOf(Props[WaterMarker], name = "watermark-books")
-      val document = Book("title", "author", "content", Enum.TopicType.Business)
+      val document = Book("title", "author", "content", Ticket(TicketStatus.Processing), Enum.TopicType.Business)
       waterMarker ! WaterMarkDocument(document, this.self)
       expectMsgPF(hint = "no WaterMarkedDocument") {
-        case WaterMarkedDocument(doc) => assert(doc.watermark.isDefined)
+        case WaterMarkedDocument(doc) => Console.println(doc); assert(doc.watermark.isDefined)
       }
 
     }
 
     "create watermarks for journals" in {
       val waterMarker = system.actorOf(Props[WaterMarker], name = "watermark-journals")
-      val document = Journal("title", "author", "content")
+      val document = Journal("title", "author", "content", Ticket(TicketStatus.NONE))
       waterMarker ! WaterMarkDocument(document, this.self)
       expectMsgPF(hint = "no WaterMarkedDocument") {
-        case WaterMarkedDocument(doc) => assert(doc.watermark.isDefined)
+        case WaterMarkedDocument(doc) => Console.println(doc); assert(doc.watermark.isDefined)
       }
 
+    }
+
+    "get watermark status by ticketid" in {
+    }
+
+    "get documents by ticketid" in {
     }
 
   }

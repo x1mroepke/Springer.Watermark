@@ -1,19 +1,8 @@
 package springer.watermark.model
 
-case class Ticket(id: String)
+import java.security.MessageDigest
 
-object Ticket {
+import akka.util.HashCode
+import springer.watermark.model.Enum.TicketStatus.TicketStatus
 
-  sealed trait TicketStatus
-
-  case object Processing extends TicketStatus
-
-  case object Finished extends TicketStatus
-
-  case object Failed extends TicketStatus
-
-  case object UnknownStatus extends TicketStatus
-
-  case class Status(id: String, status: TicketStatus)
-
-}
+case class Ticket(ticketStatus: TicketStatus, id: String = MessageDigest.getInstance("MD5").digest(HashCode.hash(10,1000).toString().getBytes()).map("%02X".format(_)).mkString )
