@@ -1,7 +1,7 @@
 package springer.watermark.model
 
 /**
- * Created by michael.roepke on 04.09.2014.
+ * General purpoes Enum class for setting states and status information
  */
 object Enum {
   object TopicType extends Enumeration {

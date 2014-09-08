@@ -1,7 +1,7 @@
 package springer.watermark.model
 
 /**
- * Created by michael.roepke on 04.09.2014.
+ * Class holding the watermark for documents
  */
 case class WatermarkSignature(content: String,
                              title: String,

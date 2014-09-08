@@ -1,17 +1,15 @@
 import akka.actor.{Props, ActorSystem}
 import akka.util.Timeout
 import akka.testkit.{TestKit, ImplicitSender}
-import springer.watermark.actor.WaterMarker.{GetWatermarkStatus, WaterMarkedDocument, WaterMarkDocument}
+import springer.watermark.actor.WaterMarker.{WaterMarkedDocument, WaterMarkDocument}
 import springer.watermark.actor._
 import springer.watermark.model.Enum.TicketStatus
 import scala.concurrent.duration._
 import org.scalatest._
 import springer.watermark.model._
 
-//import system.dispatcher
-
 /**
- * Akka system Tests.
+ * Watermarking functional tests.
  */
 class WatermarkSpec(_system: ActorSystem)
   extends TestKit(_system)

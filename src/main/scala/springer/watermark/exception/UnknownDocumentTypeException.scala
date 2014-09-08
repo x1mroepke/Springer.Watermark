@@ -1,7 +1,7 @@
 package springer.watermark.exception
 
 /**
- * Created by michael.roepke on 07.09.2014.
+ * Business Exception for undefined document types
  */
 class UnknownDocumentTypeException extends Exception {
 

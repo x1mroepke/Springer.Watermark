@@ -7,7 +7,7 @@ import springer.watermark.exception.UnknownDocumentTypeException
 import springer.watermark.model._
 
 /**
- * messages
+ * actor messages for creating and monitoring watermarkin
  */
 object WaterMarker {
 
@@ -24,9 +24,8 @@ object WaterMarker {
 }
 
 /**
- * creates watermarks
+ * creates watermarked documents and getting status about processing
  *
- * The logic for creating a watermark on a document.
  */
 class WaterMarker
   extends Actor
