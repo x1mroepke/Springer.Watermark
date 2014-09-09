@@ -3,11 +3,9 @@ import akka.actor._
 import akka.event._
 import springer.watermark.actor.WaterMarkerActor._
 import springer.watermark.actor.WaterMarkingStatusActor.{WatermarkingStatusMessage, SetWatermarkingStatusMessage}
+import springer.watermark.exception.TicketNotFoundException
 import springer.watermark.model._
 import scala.language.postfixOps
-
-
-
 /**
  * actor messages for creating and monitoring watermarking
  */
@@ -41,6 +39,7 @@ class WaterMarkerActor
 
   override def preStart() {
     super.preStart()
+    context.setReceiveTimeout(10 seconds)
   }
 
   val waterMarkingStatusActor = context.actorOf(WaterMarkerActor.props(mapOfDocuments),"watermarkingStatus")
@@ -53,13 +52,10 @@ class WaterMarkerActor
       try {
         waterMarkingStatusActor ! SetWatermarkingStatusMessage(document, Enum.TicketStatus.NONE, sender)
         ws.preProcessing
-        sender ! WatermarkingStatusMessage(document)
         waterMarkingStatusActor ! SetWatermarkingStatusMessage(document, Enum.TicketStatus.Processing, sender)
         ws.processing
         ws.postProcessing
-        sender ! WatermarkingStatusMessage(document)
         waterMarkingStatusActor ! SetWatermarkingStatusMessage(document, Enum.TicketStatus.Finished, sender)
-        sender ! WatermarkingStatusMessage(document)
         ws
       }
       catch {
@@ -71,7 +67,7 @@ class WaterMarkerActor
     case WaterMarkDocumentMessage(document, handler) =>
       handler ! WaterMarkedDocumentMessage(document.copy(createWaterMark(document)))
     case GetWatermarkingStatusMessage(ticket, handler) => {
-      waterMarkingStatusActor ! GetWatermarkingStatusMessage(ticket, handler)
+      handler ! GetWatermarkingStatusMessage(ticket, sender)
     }
     case GetDocumentMessage(ticket, handler) => {
        mapOfDocuments.get(ticket.id) match {
@@ -80,15 +76,13 @@ class WaterMarkerActor
 
       }
     }
-    case WatermarkingStatusMessage(doc: Document) => {
-      sender  !  WatermarkingStatusMessage(doc)
-    }
   }
 }
-
+/*
+ * Actor for setting, getting and sending Watermarking status
+ */
 object WaterMarkingStatusActor
 {
-  // case class GetWatermarkingStatusMessage(ticketId: String, handler: ActorRef)
   case class SetWatermarkingStatusMessage(document: Document, ticketStatus: Enum.TicketStatus.TicketStatus, handler: ActorRef)
   case class WatermarkingStatusMessage(doc: Document)
 }
@@ -103,12 +97,12 @@ class WaterMarkingStatusActor(mapOfDocuments: Map[String, Document])
       val doc = mapOfDocuments.get(ticket.id)
       doc match {
         case Some(doc) => handler ! WatermarkingStatusMessage(doc)
-        case None =>  handler ! "No Document found with Ticket Id " + ticket.id
+        case None =>  throw new TicketNotFoundException("Ticket ID = " + ticket.id)
       }
     }
-    case SetWatermarkingStatusMessage(document, ticketStatus, sender) => {
-      log.debug("Set document with title [{}] to ticket status [{}]", document.title, document.ticket.ticketStatus)
-      document.ticket.ticketStatus = ticketStatus
+    case SetWatermarkingStatusMessage(document, ticketStatus, handler) => {
+        document.ticket.ticketStatus = ticketStatus
+        log.debug("Set document with title [{}] to ticket status [{}]", document.title, document.ticket.ticketStatus)
     }
 
   }

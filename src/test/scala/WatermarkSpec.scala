@@ -30,11 +30,14 @@ class WatermarkSpec(_system: ActorSystem)
 
   "WatermarkActor" should {
 
-    def expectMessages {
+    def pleaseWait {
       Console.println("-----------------------------------------------------")
       Console.println("Please wait... I am receiving messages...")
       Console.println("-----------------------------------------------------")
-      receiveWhile(max = (20 seconds), idle = (5 seconds), messages = 20) {
+    }
+    def expectMessages {
+      pleaseWait
+      receiveWhile(max = (10 seconds), idle = (5 seconds), messages = 30) {
         case WatermarkingStatusMessage(doc: Document) => {
           Console.printf("Got watermark status for doc title %s %s\n", doc.title, doc.ticket.ticketStatus);
           20
@@ -49,50 +52,49 @@ class WatermarkSpec(_system: ActorSystem)
 
     "create watermarks for documents" in {
       val waterMarker = system.actorOf(Props[WaterMarkerActor], name = "watermark-documents")
-      val document = Book("title", "author", "content", Ticket(TicketStatus.NONE), Enum.TopicType.Business)
+      val nanos = System.nanoTime()
+      val document = Book("title-" + nanos, "author-" + nanos, "book content-" + nanos, Ticket(TicketStatus.NONE), Enum.TopicType.Business)
       waterMarker ! WaterMarkDocumentMessage(document, this.self)
-      expectMsgPF(hint = "Waiting for Watermarked Document") {
+      pleaseWait
+      receiveWhile(max = (10 seconds), idle = (5 seconds), messages = 30) {
         case WaterMarkedDocumentMessage(doc) => Console.println(doc); assert(doc.watermark.isDefined)
-        case WatermarkingStatusMessage(doc: Document) => {
-          Console.printf("Got watermark status for doc title %s %s\n", doc.title, doc.ticket.ticketStatus);
-        }
+        case WatermarkingStatusMessage(doc: Document) => // ignore here
       }
     }
 
     "create watermarks for books and check topic" in {
       val waterMarker = system.actorOf(Props[WaterMarkerActor], name = "watermark-book-check-topics")
-      val document = Book("title", "author", "content", Ticket(TicketStatus.NONE), Enum.TopicType.Business)
+      val nanos = System.nanoTime()
+      val document = Book("title-" + nanos, "author-" + nanos, "book content-" + nanos, Ticket(TicketStatus.NONE), Enum.TopicType.Media)
       waterMarker ! WaterMarkDocumentMessage(document, this.self)
-      expectMsgPF(hint = "Waiting for Watermarked Document") {
+      pleaseWait
+      receiveWhile(max = (10 seconds), idle = (10 seconds), messages = 30) {
         case WaterMarkedDocumentMessage(doc) => doc match {
           case book: Book => Console.println(book); assert(book.topic != Enum.TopicType.NONE)
           case _ => fail("Document is not a book: " + doc)
         }
-        case WatermarkingStatusMessage(doc: Document) => {
-          Console.printf("Got watermark status for doc title %s %s\n", doc.title, doc.ticket.ticketStatus);
-        }
+        case WatermarkingStatusMessage(doc: Document) => // ignore here
       }
     }
 
     "create watermarks for journals" in {
       val waterMarker = system.actorOf(Props[WaterMarkerActor], name = "watermark-journal")
-      val document = Journal("title", "author", "content", Ticket(TicketStatus.NONE))
+      val nanos = System.nanoTime()
+      val document = Journal("title-" + nanos, "author-" + nanos, "journal content-" + nanos, Ticket(TicketStatus.NONE))
       waterMarker ! WaterMarkDocumentMessage(document, this.self)
-      expectMsgPF(hint = "Waiting for Watermarked Document") {
+      pleaseWait
+      receiveWhile(max = (20 seconds), idle = (5 seconds), messages = 30) {
         case WaterMarkedDocumentMessage(doc) => doc match {
           case journal: Journal => Console.println(journal)
           case _ => fail("Document is not a journal: " + doc)
         }
-        case WatermarkingStatusMessage(doc: Document) => {
-          Console.printf("Got watermark status for doc title %s %s\n", doc.title, doc.ticket.ticketStatus);
-        }
+        case WatermarkingStatusMessage(doc: Document) => // ignore here
       }
     }
 
-    "get document and watermark status by ticketid" in {
+    "get document and watermark status by ticket id" in {
       val systemW = ActorSystem("WatermarkActorSystem")
       var waterMarker = systemW.actorOf(Props[WaterMarkerActor], name = "get-status-by-ticketid")
-      Console.println(waterMarker.path)
       val documentA = Journal("titleA", "author", "content", Ticket(TicketStatus.NONE))
       val documentB = Book("titleB", "author", "content", Ticket(TicketStatus.NONE), Enum.TopicType.Science)
       val documentC = Journal("titleC", "author", "content", Ticket(TicketStatus.NONE))
