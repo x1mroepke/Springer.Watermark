@@ -24,6 +24,11 @@ object WaterMarkerActor {
   case class GetDocumentMessage(ticket: Ticket, handler: ActorRef)
 
   case class DocumentNotFinished(document: Document, handler: ActorRef)
+
+  var mapOfDocuments = Map[String, Document]()
+
+  def props(mapOfDocuments: Map[String, Document]) = Props(new WaterMarkingStatusActor(mapOfDocuments))
+
 }
 
 /**
@@ -41,14 +46,12 @@ class WaterMarkerActor
     context.setReceiveTimeout(20 seconds)
   }
 
-  val mapOfDocuments = Map[String, Document]()
-
-  val waterMarkingStatusActor = context.actorOf(Props[WaterMarkingStatusActor],"watermarkingStatus")
+  val waterMarkingStatusActor = context.actorOf(WaterMarkerActor.props(mapOfDocuments),"watermarkingStatus")
 
   def createWaterMark(document: Document): WatermarkSignature = {
-    mapOfDocuments + document.ticket.id -> document
 
       val ws = WatermarkSignature(document.content, document.title, document.author)
+      mapOfDocuments += (document.ticket.id -> document)
       try {
         waterMarkingStatusActor ! SetWatermarkingStatusMessage(document, Enum.TicketStatus.NONE, sender)
         ws.preProcessing
@@ -66,8 +69,8 @@ class WaterMarkerActor
   override def receive: Actor.Receive = LoggingReceive {
     case WaterMarkDocumentMessage(document, handler) =>
       handler ! WaterMarkedDocumentMessage(document.copy(createWaterMark(document)))
-    case GetWatermarkingStatusMessage(ticket, mapOfDocuments, handler) => {
-      waterMarkingStatusActor ! GetWatermarkingStatusMessage(ticket, mapOfDocuments, handler)
+    case GetWatermarkingStatusMessage(ticket, handler) => {
+      waterMarkingStatusActor ! GetWatermarkingStatusMessage(ticket, handler)
     }
     case GetDocumentMessage(ticket, handler) => {
        mapOfDocuments.get(ticket.id) match {
@@ -81,21 +84,19 @@ class WaterMarkerActor
 
 object WaterMarkingStatusActor
 {
-  var mapOfDocuments = Map[String, Document]()
-
-  case class GetWatermarkingStatusMessage(ticketId: String, mapOfDocuments: Map[String, Document], handler: ActorRef)
+  case class GetWatermarkingStatusMessage(ticketId: String, handler: ActorRef)
   case class SetWatermarkingStatusMessage(document: Document, ticketStatus: Enum.TicketStatus.TicketStatus, handler: ActorRef)
   case class WatermarkingStatusMessage(doc: Option[Document], handler: ActorRef )
 }
 
-class WaterMarkingStatusActor
+class WaterMarkingStatusActor(mapOfDocuments: Map[String, Document])
   extends Actor
   with ActorLogging {
 
 
 
   override def receive: Actor.Receive = LoggingReceive {
-    case GetWatermarkingStatusMessage(ticketId, mapOfDocuments, handler) =>
+    case GetWatermarkingStatusMessage(ticketId, handler) =>
     {
       val doc = mapOfDocuments.get(ticketId)
       handler ! WatermarkingStatusMessage(doc, handler)

@@ -25,7 +25,7 @@ class WatermarkSpec(_system: ActorSystem)
     TestKit.shutdownActorSystem(system)
   }
 
-  implicit val timeout = Timeout(10 seconds)
+  implicit val timeout = Timeout(60 seconds)
 
   "WatermarkActor" should {
 
@@ -63,6 +63,22 @@ class WatermarkSpec(_system: ActorSystem)
       }
 
     "get watermark status by ticketid" in {
+      val waterMarker = system.actorOf(Props[WaterMarkerActor], name = "get-status-by-ticketid")
+      val documentA = Journal("titleA", "author", "content", Ticket(TicketStatus.NONE))
+      val documentB = Book("titleB", "author", "content", Ticket(TicketStatus.NONE), Enum.TopicType.Science)
+      val documentC = Journal("titleC", "author", "content", Ticket(TicketStatus.NONE))
+      val documentD = Book("titleD", "author", "content", Ticket(TicketStatus.NONE), Enum.TopicType.Media)
+      waterMarker ! WaterMarkDocumentMessage(documentA, this.self)
+      waterMarker ! WaterMarkDocumentMessage(documentB, this.self)
+      waterMarker ! GetWatermarkingStatusMessage(documentB.ticket.id, this.self)
+      waterMarker ! WaterMarkDocumentMessage(documentC, this.self)
+      waterMarker ! WaterMarkDocumentMessage(documentD, this.self)
+      expectMsgPF(hint = "Waiting for Watermarked Document") {
+        case WaterMarkedDocumentMessage(doc) => doc match {
+          case journal: Journal => Console.println(journal)
+          case _ => fail("Document is not a journal: " + doc)
+        }
+      }
     }
 
     "get documents by ticketid" in {
