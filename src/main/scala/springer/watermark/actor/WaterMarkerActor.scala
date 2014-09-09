@@ -7,6 +7,7 @@ import springer.watermark.actor.WaterMarkingStatus.{WatermarkingStatus, GetWater
 import springer.watermark.exception.UnknownDocumentTypeException
 import springer.watermark.model.Enum.TicketStatus
 import springer.watermark.model._
+import scala.language.postfixOps
 
 /**
  * actor messages for creating and monitoring watermarkin
