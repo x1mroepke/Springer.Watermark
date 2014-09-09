@@ -29,21 +29,27 @@ class WatermarkSpec(_system: ActorSystem)
 
   "WatermarkActor" should {
 
-    "create watermarks for books" in {
-      val waterMarker = system.actorOf(Props[WaterMarker], name = "watermark-books")
+    "create watermarks for documents" in {
+      val waterMarker = system.actorOf(Props[WaterMarker], name = "watermark-documents")
       val document = Book("title", "author", "content", Ticket(TicketStatus.Processing), Enum.TopicType.Business)
-      waterMarker ! WaterMarkDocument(document, this.self)
-      waterMarker ! GetWatermarkingStatus(document.ticket,this.self)
-    }
-
-    "create watermarks for journals" in {
-      val waterMarker = system.actorOf(Props[WaterMarker], name = "watermark-journals")
-      val document = Journal("title", "author", "content", Ticket(TicketStatus.NONE))
       waterMarker ! WaterMarkDocument(document, this.self)
       expectMsgPF(hint = "no WaterMarkedDocument") {
         case WaterMarkedDocument(doc) => Console.println(doc); assert(doc.watermark.isDefined)
       }
+    }
 
+    "create watermarks for books and check topic" in {
+      val waterMarker = system.actorOf(Props[WaterMarker], name = "watermark-book-check-topics")
+      val document = Book("title", "author", "content", Ticket(TicketStatus.Processing), Enum.TopicType.Business)
+      waterMarker ! WaterMarkDocument(document, this.self)
+      expectMsgPF(hint = "no WaterMarkedDocument") {
+        case WaterMarkedDocument(doc) => doc match {
+          case book: Book => Console.println(doc); assert(book.topic != Enum.TopicType.NONE)
+          case _ => fail("Document is not a book: " + doc)
+        }
+
+
+      }
     }
 
     "get watermark status by ticketid" in {
