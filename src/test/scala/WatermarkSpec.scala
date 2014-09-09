@@ -2,6 +2,7 @@ import akka.actor.{Props, ActorSystem}
 import akka.util.Timeout
 import akka.testkit.{TestKit, ImplicitSender}
 import springer.watermark.actor.WaterMarker.{WaterMarkedDocument, WaterMarkDocument}
+import springer.watermark.actor.WaterMarkingStatus.{WatermarkingStatus, GetWatermarkingStatus}
 import springer.watermark.actor._
 import springer.watermark.model.Enum.TicketStatus
 import scala.concurrent.duration._
@@ -32,10 +33,7 @@ class WatermarkSpec(_system: ActorSystem)
       val waterMarker = system.actorOf(Props[WaterMarker], name = "watermark-books")
       val document = Book("title", "author", "content", Ticket(TicketStatus.Processing), Enum.TopicType.Business)
       waterMarker ! WaterMarkDocument(document, this.self)
-      expectMsgPF(hint = "no WaterMarkedDocument") {
-        case WaterMarkedDocument(doc) => Console.println(doc); assert(doc.watermark.isDefined)
-      }
-
+      waterMarker ! GetWatermarkingStatus(document.ticket,this.self)
     }
 
     "create watermarks for journals" in {

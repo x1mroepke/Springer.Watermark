@@ -3,7 +3,9 @@ package springer.watermark.actor
 import akka.actor._
 import akka.event.LoggingReceive
 import springer.watermark.actor.WaterMarker._
+import springer.watermark.actor.WaterMarkingStatus.{WatermarkingStatus, GetWatermarkingStatus}
 import springer.watermark.exception.UnknownDocumentTypeException
+import springer.watermark.model.Enum.TicketStatus
 import springer.watermark.model._
 
 /**
@@ -38,6 +40,8 @@ class WaterMarker
     context.setReceiveTimeout(20 seconds)
   }
 
+  val waterMarkingStatus = context.actorOf(Props[WaterMarkingStatus],"watermarkingStatus")
+
   def createWaterMark(document: Document): WatermarkSignature = document match {
     case book: Book => WatermarkSignature(book.content, book.title, book.author, Some(book.topic))
     case journal: Journal => WatermarkSignature(journal.content, journal.title, journal.author)
@@ -47,7 +51,26 @@ class WaterMarker
   override def receive: Actor.Receive = LoggingReceive {
     case WaterMarkDocument(document, handler) =>
       handler ! WaterMarkedDocument(document.copy(createWaterMark(document)))
-    case GetWatermarkStatus(ticket, handler) =>
+    case GetWatermarkingStatus(ticket, handler) => {
+      waterMarkingStatus ! GetWatermarkingStatus(ticket, handler)
+    }
     case msg: GetDocument =>
+  }
+}
+
+object WaterMarkingStatus
+{
+  case class GetWatermarkingStatus(ticket: Ticket, handler: ActorRef)
+  case class WatermarkingStatus(ticket: Ticket)
+}
+
+
+class WaterMarkingStatus
+  extends Actor
+  with ActorLogging {
+
+  override def receive: Actor.Receive = LoggingReceive {
+    case GetWatermarkingStatus(ticket, handler) =>
+      handler ! WatermarkingStatus(ticket)
   }
 }
