@@ -40,7 +40,7 @@ class WatermarkSpec(_system: ActorSystem)
 
     "create watermarks for books and check topic" in {
       val waterMarker = system.actorOf(Props[WaterMarker], name = "watermark-book-check-topics")
-      val document = Book("title", "author", "content", Ticket(TicketStatus.None), Enum.TopicType.Business)
+      val document = Book("title", "author", "content", Ticket(TicketStatus.NONE), Enum.TopicType.Business)
       waterMarker ! WaterMarkDocument(document, this.self)
       expectMsgPF(hint = "Waiting for Watermarked Document") {
         case WaterMarkedDocument(doc) => doc match {
