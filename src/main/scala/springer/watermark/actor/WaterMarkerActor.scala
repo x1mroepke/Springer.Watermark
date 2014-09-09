@@ -1,36 +1,36 @@
 package springer.watermark.actor
-
 import akka.actor._
 import akka.event.LoggingReceive
-import springer.watermark.actor.WaterMarker._
-import springer.watermark.actor.WaterMarkingStatus.{WatermarkingStatus, GetWatermarkingStatus}
+import springer.watermark.actor.WaterMarkerActor._
+import springer.watermark.actor.WaterMarkingStatusActor.{WatermarkingStatusMessage, SetWatermarkingStatusMessage, GetWatermarkingStatusMessage}
 import springer.watermark.exception.UnknownDocumentTypeException
-import springer.watermark.model.Enum.TicketStatus
 import springer.watermark.model._
+import scala.collection.immutable.HashMap
 import scala.language.postfixOps
+import scala.util.control.Exception
+
 
 /**
  * actor messages for creating and monitoring watermarkin
  */
-object WaterMarker {
+object WaterMarkerActor {
 
-  case class WaterMarkDocument(document: Document, handler: ActorRef)
+  case class WaterMarkDocumentMessage(document: Document, handler: ActorRef)
 
-  case class WaterMarkedDocument(document: Document)
+  case class WaterMarkedDocumentMessage(document: Document)
 
-  case class GetWatermarkStatus(ticket: Ticket, handler: ActorRef)
+  case class GetWatermarkStatusMessage(ticket: Ticket, handler: ActorRef)
 
-  case object NoDocumentReceived
+  case class GetDocumentMessage(ticket: Ticket, handler: ActorRef)
 
-  case class GetDocument(ticket: Ticket)
-
+  case class DocumentNotFinished(document: Document, handler: ActorRef)
 }
 
 /**
  * creates watermarked documents and getting status about processing
  *
  */
-class WaterMarker
+class WaterMarkerActor
   extends Actor
   with ActorLogging {
 
@@ -41,37 +41,66 @@ class WaterMarker
     context.setReceiveTimeout(20 seconds)
   }
 
-  val waterMarkingStatus = context.actorOf(Props[WaterMarkingStatus],"watermarkingStatus")
+  val mapOfDocuments = Map[String, Document]()
 
-  def createWaterMark(document: Document): WatermarkSignature = document match {
-    case book: Book => WatermarkSignature(book.content, book.title, book.author, Some(book.topic))
-    case journal: Journal => WatermarkSignature(journal.content, journal.title, journal.author)
-    case _ => throw new UnknownDocumentTypeException()
+  val waterMarkingStatusActor = context.actorOf(Props[WaterMarkingStatusActor],"watermarkingStatus")
+
+  def createWaterMark(document: Document): WatermarkSignature = {
+    mapOfDocuments + document.ticket.id -> document
+
+      val ws = WatermarkSignature(document.content, document.title, document.author)
+      try {
+        waterMarkingStatusActor ! SetWatermarkingStatusMessage(document, Enum.TicketStatus.NONE, sender)
+        ws.preProcessing
+        waterMarkingStatusActor ! SetWatermarkingStatusMessage(document, Enum.TicketStatus.Processing, sender)
+        ws.processing
+        ws.postProcessing
+        waterMarkingStatusActor ! SetWatermarkingStatusMessage(document, Enum.TicketStatus.Finished, sender)
+        ws
+      }
+      catch {
+        case ex: Exception => { waterMarkingStatusActor ! SetWatermarkingStatusMessage(document, Enum.TicketStatus.Failed, sender); ws }
+      }
   }
 
   override def receive: Actor.Receive = LoggingReceive {
-    case WaterMarkDocument(document, handler) =>
-      handler ! WaterMarkedDocument(document.copy(createWaterMark(document)))
-    case GetWatermarkingStatus(ticket, handler) => {
-      waterMarkingStatus ! GetWatermarkingStatus(ticket, handler)
+    case WaterMarkDocumentMessage(document, handler) =>
+      handler ! WaterMarkedDocumentMessage(document.copy(createWaterMark(document)))
+    case GetWatermarkingStatusMessage(ticket, mapOfDocuments, handler) => {
+      waterMarkingStatusActor ! GetWatermarkingStatusMessage(ticket, mapOfDocuments, handler)
     }
-    case msg: GetDocument =>
+    case GetDocumentMessage(ticket, handler) => {
+       mapOfDocuments.get(ticket.id) match {
+        case doc: Document => if (doc.ticket.ticketStatus == Enum.TicketStatus.Finished) handler ! doc
+        case _ => handler ! DocumentNotFinished
+
+      }
+    }
   }
 }
 
-object WaterMarkingStatus
+object WaterMarkingStatusActor
 {
-  case class GetWatermarkingStatus(ticket: Ticket, handler: ActorRef)
-  case class WatermarkingStatus(ticket: Ticket)
+  var mapOfDocuments = Map[String, Document]()
+
+  case class GetWatermarkingStatusMessage(ticketId: String, mapOfDocuments: Map[String, Document], handler: ActorRef)
+  case class SetWatermarkingStatusMessage(document: Document, ticketStatus: Enum.TicketStatus.TicketStatus, handler: ActorRef)
+  case class WatermarkingStatusMessage(doc: Option[Document], handler: ActorRef )
 }
 
-
-class WaterMarkingStatus
+class WaterMarkingStatusActor
   extends Actor
   with ActorLogging {
 
+
+
   override def receive: Actor.Receive = LoggingReceive {
-    case GetWatermarkingStatus(ticket, handler) =>
-      handler ! WatermarkingStatus(ticket)
+    case GetWatermarkingStatusMessage(ticketId, mapOfDocuments, handler) =>
+    {
+      val doc = mapOfDocuments.get(ticketId)
+      handler ! WatermarkingStatusMessage(doc, handler)
+    }
+    case SetWatermarkingStatusMessage(document, ticketStatus, sender) => document.ticket.ticketStatus = ticketStatus
+
   }
 }
