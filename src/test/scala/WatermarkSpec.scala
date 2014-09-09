@@ -1,7 +1,7 @@
 import akka.actor.{ActorRef, Props, ActorSystem}
 import akka.util.Timeout
 import akka.testkit.{TestKit, ImplicitSender}
-import springer.watermark.actor.WaterMarkerActor.{GetWatermarkingStatusMessage, WaterMarkedDocumentMessage, WaterMarkDocumentMessage}
+import springer.watermark.actor.WaterMarkerActor.{GetDocumentMessage, GetWatermarkingStatusMessage, WaterMarkedDocumentMessage, WaterMarkDocumentMessage}
 import springer.watermark.actor.WaterMarkingStatusActor.{WatermarkingStatusMessage, SetWatermarkingStatusMessage}
 import springer.watermark.actor._
 import springer.watermark.model.Enum.TicketStatus
@@ -85,7 +85,7 @@ class WatermarkSpec(_system: ActorSystem)
       pleaseWait
       receiveWhile(max = (20 seconds), idle = (5 seconds), messages = 30) {
         case WaterMarkedDocumentMessage(doc) => doc match {
-          case journal: Journal => Console.println(journal)
+          case journal: Journal => Console.println(journal); assert(journal.watermark != None)
           case _ => fail("Document is not a journal: " + doc)
         }
         case WatermarkingStatusMessage(doc: Document) => // ignore here
@@ -104,6 +104,18 @@ class WatermarkSpec(_system: ActorSystem)
       waterMarker ! WaterMarkDocumentMessage(documentC, this.self)
       waterMarker ! WaterMarkDocumentMessage(documentD, this.self)
       expectMessages
+      waterMarker ! GetDocumentMessage(documentC.ticket, this.self)
+      expectMsgPF(hint = "Look for document") {
+        case doc: Document => doc match {
+          case document: Document => {
+            Console.GREEN
+            Console.printf("Found document %s for ticket id %s\n", document.title, document.ticket.id)
+            Console.BLACK
+            assert(doc.title == "titleC")
+          }
+          case _ => fail("Document not finished or not found " + doc.title)
+        }
+      }
     }
   }
 }

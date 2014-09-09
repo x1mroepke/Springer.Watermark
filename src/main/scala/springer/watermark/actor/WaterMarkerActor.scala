@@ -71,7 +71,12 @@ class WaterMarkerActor
     }
     case GetDocumentMessage(ticket, handler) => {
        mapOfDocuments.get(ticket.id) match {
-        case doc: Document => if (doc.ticket.ticketStatus == Enum.TicketStatus.Finished) handler ! doc
+        case Some(doc) => {
+          if (doc.ticket.ticketStatus == Enum.TicketStatus.Finished)
+            handler ! doc
+          else
+            handler ! DocumentNotFinished
+        }
         case _ => handler ! DocumentNotFinished
 
       }
