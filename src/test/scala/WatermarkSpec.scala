@@ -9,6 +9,7 @@ import scala.concurrent.duration._
 import org.scalatest._
 import springer.watermark.model._
 
+
 /**
  * Watermarking functional tests.
  */
@@ -74,7 +75,7 @@ class WatermarkSpec(_system: ActorSystem)
       waterMarker ! WaterMarkDocumentMessage(documentC, this.self)
       waterMarker ! WaterMarkDocumentMessage(documentD, this.self)
       expectMsgPF(hint = "Waiting for Watermarked Document") {
-        case WaterMarkedDocumentMessage(doc) => doc match {
+        case WaterMarkedDocumentMessage(doc) =>  doc match {
           case journal: Journal => Console.println(journal)
           case _ => fail("Document is not a journal: " + doc)
         }

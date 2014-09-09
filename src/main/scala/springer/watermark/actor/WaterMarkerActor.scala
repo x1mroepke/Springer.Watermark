@@ -1,17 +1,15 @@
 package springer.watermark.actor
 import akka.actor._
-import akka.event.LoggingReceive
+import akka.event._
 import springer.watermark.actor.WaterMarkerActor._
 import springer.watermark.actor.WaterMarkingStatusActor.{WatermarkingStatusMessage, SetWatermarkingStatusMessage, GetWatermarkingStatusMessage}
-import springer.watermark.exception.UnknownDocumentTypeException
 import springer.watermark.model._
-import scala.collection.immutable.HashMap
 import scala.language.postfixOps
-import scala.util.control.Exception
+
 
 
 /**
- * actor messages for creating and monitoring watermarkin
+ * actor messages for creating and monitoring watermarking
  */
 object WaterMarkerActor {
 
@@ -52,6 +50,7 @@ class WaterMarkerActor
 
       val ws = WatermarkSignature(document.content, document.title, document.author)
       mapOfDocuments += (document.ticket.id -> document)
+      log.debug("mapOfDocuments holds [{}] elements",mapOfDocuments.size)
       try {
         waterMarkingStatusActor ! SetWatermarkingStatusMessage(document, Enum.TicketStatus.NONE, sender)
         ws.preProcessing
@@ -101,7 +100,10 @@ class WaterMarkingStatusActor(mapOfDocuments: Map[String, Document])
       val doc = mapOfDocuments.get(ticketId)
       handler ! WatermarkingStatusMessage(doc, handler)
     }
-    case SetWatermarkingStatusMessage(document, ticketStatus, sender) => document.ticket.ticketStatus = ticketStatus
+    case SetWatermarkingStatusMessage(document, ticketStatus, sender) => {
+      log.debug("Set document with title [{}] to ticket status [{}]", document.title, document.ticket.ticketStatus)
+      document.ticket.ticketStatus = ticketStatus
+    }
 
   }
 }
