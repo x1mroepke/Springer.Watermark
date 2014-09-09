@@ -31,26 +31,36 @@ class WatermarkSpec(_system: ActorSystem)
 
     "create watermarks for documents" in {
       val waterMarker = system.actorOf(Props[WaterMarker], name = "watermark-documents")
-      val document = Book("title", "author", "content", Ticket(TicketStatus.Processing), Enum.TopicType.Business)
+      val document = Book("title", "author", "content", Ticket(TicketStatus.NONE), Enum.TopicType.Business)
       waterMarker ! WaterMarkDocument(document, this.self)
-      expectMsgPF(hint = "no WaterMarkedDocument") {
+      expectMsgPF(hint = "Waiting for Watermarked Document") {
         case WaterMarkedDocument(doc) => Console.println(doc); assert(doc.watermark.isDefined)
       }
     }
 
     "create watermarks for books and check topic" in {
       val waterMarker = system.actorOf(Props[WaterMarker], name = "watermark-book-check-topics")
-      val document = Book("title", "author", "content", Ticket(TicketStatus.Processing), Enum.TopicType.Business)
+      val document = Book("title", "author", "content", Ticket(TicketStatus.None), Enum.TopicType.Business)
       waterMarker ! WaterMarkDocument(document, this.self)
-      expectMsgPF(hint = "no WaterMarkedDocument") {
+      expectMsgPF(hint = "Waiting for Watermarked Document") {
         case WaterMarkedDocument(doc) => doc match {
-          case book: Book => Console.println(doc); assert(book.topic != Enum.TopicType.NONE)
+          case book: Book => Console.println(book); assert(book.topic != Enum.TopicType.NONE)
           case _ => fail("Document is not a book: " + doc)
         }
-
-
       }
     }
+
+      "create watermarks for journals" in {
+        val waterMarker = system.actorOf(Props[WaterMarker], name = "watermark-journal")
+        val document = Journal("title", "author", "content", Ticket(TicketStatus.NONE))
+        waterMarker ! WaterMarkDocument(document, this.self)
+        expectMsgPF(hint = "Waiting for Watermarked Document") {
+          case WaterMarkedDocument(doc) => doc match {
+            case journal: Journal => Console.println(journal)
+            case _ => fail("Document is not a journal: " + doc)
+          }
+        }
+      }
 
     "get watermark status by ticketid" in {
     }
