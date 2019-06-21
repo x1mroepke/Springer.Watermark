@@ -5,7 +5,8 @@ Springer Watermark Test App
 
 Run Tests: sbt testOnly
 
-> sbt testOnly
+```
+$ sbt testOnly
 [info] Loading project definition from /home/michael/Springer.Watermark/project
 [info] Set current project to Springer.Watermark (in build file:/home/michael/Springer.Watermark/)
 [DEBUG] [06/21/2019 20:36:10.348] [pool-4-thread-5] [EventStream(akka://WatermarkActorTest)] logger log1-Logging$DefaultLogger started
@@ -76,6 +77,6 @@ Found document titleC for ticket id 3946406840195213
 [info] Passed: Total 4, Failed 0, Errors 0, Passed 4
 [success] Total time: 31 s, completed Jun 21, 2019 8:36:36 PM
 michael@michael-UBU18 ~/Springer.Watermark (master)-local-dev
-
+```
 
 
