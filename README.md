@@ -5,7 +5,7 @@ Springer Watermark Test App
 
 Run Tests: sbt testOnly
 
-$ sbt testOnly
+> sbt testOnly
 [info] Loading project definition from /home/michael/Springer.Watermark/project
 [info] Set current project to Springer.Watermark (in build file:/home/michael/Springer.Watermark/)
 [DEBUG] [06/21/2019 20:36:10.348] [pool-4-thread-5] [EventStream(akka://WatermarkActorTest)] logger log1-Logging$DefaultLogger started
